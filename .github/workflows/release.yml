@@ -1,4 +1,4 @@
-name: 'Tauri App Release'
+name: 'Lingvo Injector App Release'
 
 on:
   push:
@@ -6,7 +6,9 @@ on:
       - 'v*'
 
 jobs:
-  tauri:
+  release-build:
+    permissions: 
+      contents: write
     strategy:
       fail-fast: false
       matrix:
