@@ -18,7 +18,8 @@ Before creating an issue please ensure that the problem is not [already reported
 
 2. **Create a New Branch**
 
-   > [!NOTE] All development takes place in the dev branch. The main branch always contains only stable, release-ready code.
+   > [!NOTE] 
+   > All development takes place in the dev branch. The main branch always contains only stable, release-ready code.
 
    ```sh
    git checkout dev
@@ -33,18 +34,26 @@ Before creating an issue please ensure that the problem is not [already reported
 
    ```sh
    git add .
-   git commit -m "Your commit message"
+   git commit -m "feat: add new super feature"
    ```
 
 5. **Push Changes**
 
    ```sh
-   git push origin dev
+   git push -u origin feature/short-description
    ```
 
 6. **Create a Pull Request**
 
-   Once you've completed your work, create a Pull Request from your branch to the dev branch.
+   Once you've completed your work, create a Pull Request from your branch to the **_dev branch_**. Please ensure that your branch is up-to-date with the dev branch and that the Pull Request is targeted at the dev branch, not the main branch. Double-check the target branch before submitting the Pull Request.
+
+7. **After Pull Request**
+
+   ```sh
+   git checkout dev
+   git pull origin dev
+   git branch -d feature/your-new-feature
+   ```
 
 ## Commit messages
 
