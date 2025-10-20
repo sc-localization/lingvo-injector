@@ -2,13 +2,12 @@ import { FunctionComponent, useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 
-// Список языков для выбора на фронтенде
 const languages = [
   {
     name: 'Русский (Russian)',
     code: 'korean_(south_korea)',
     isRecommended: true,
-  }, // Используем Korean по запросу
+  },
   { name: 'Chinese (Simplified)', code: 'chinese_(simplified)' },
   { name: 'Chinese (Traditional)', code: 'chinese_(traditional)' },
   { name: 'English', code: 'english' },
@@ -23,19 +22,19 @@ const languages = [
   { name: 'Spanish (spain)', code: 'spanish_(spain)' },
 ];
 
-// Типы для настроек
 interface AppSettings {
   base_folder_path?: string;
   selected_language_code?: string;
+  selected_version?: string;
 }
 
 const App: FunctionComponent = () => {
-  const [folder, setFolder] = useState<string | null>(null);
-
+  const [baseGameFolder, setBaseGameFolder] = useState<string | null>(null);
+  const [availableVersions, setAvailableVersions] = useState<string[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<string>('');
   const [selectedLanguageCode, setSelectedLanguageCode] = useState<string>(
     languages[0].code
   );
-
   const [loading, setLoading] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [message, setMessage] = useState<{
@@ -43,19 +42,16 @@ const App: FunctionComponent = () => {
     text: string;
   } | null>(null);
 
-  /**
-   * Запись настроек в файл (Rust)
-   */
   const saveSettings = async (settings: AppSettings) => {
     try {
       const settingsJson = JSON.stringify(settings);
-      await invoke('write_settings', { settingsJson: settingsJson });
+
+      await invoke('write_settings', { settingsJson });
     } catch (error) {
       console.error('Ошибка записи настроек:', error);
     }
   };
 
-  // Автоматический поиск и загрузка сохраненных настроек при загрузке
   useEffect(() => {
     const handleInitialLoad = async () => {
       setLoading(true);
@@ -66,38 +62,48 @@ const App: FunctionComponent = () => {
 
       let foundPath: string | null = null;
       let loadedLanguageCode: string | undefined = undefined;
+      let loadedVersion: string | undefined = undefined;
 
       try {
-        // 1. Читаем сохраненные настройки
         const settingsJson = await invoke<string>('read_settings');
         const settings: AppSettings = JSON.parse(settingsJson);
 
-        if (settings.base_folder_path) {
-          foundPath = settings.base_folder_path;
-        }
+        if (settings.base_folder_path) foundPath = settings.base_folder_path;
 
-        if (settings.selected_language_code) {
+        if (settings.selected_language_code)
           loadedLanguageCode = settings.selected_language_code;
-        }
 
-        // 2. Если путь не найден в настройках, ищем автоматически
+        if (settings.selected_version)
+          loadedVersion = settings.selected_version;
+
         if (!foundPath) {
           const autoFoundPath = await invoke<string | null>(
             'try_auto_find_base_folder'
           );
-          if (autoFoundPath) {
-            foundPath = autoFoundPath;
-          }
+
+          if (autoFoundPath) foundPath = autoFoundPath;
         }
 
-        // 3. Устанавливаем состояния
         if (foundPath) {
-          setFolder(foundPath);
-          // Сохраняем найденный/загруженный путь (на случай если это свежий автопоиск)
+          setBaseGameFolder(foundPath);
+
           await saveSettings({
             base_folder_path: foundPath,
             selected_language_code: loadedLanguageCode,
+            selected_version: loadedVersion,
           });
+
+          const versions = await invoke<string[]>('find_available_versions', {
+            baseFolderPath: foundPath,
+          });
+
+          setAvailableVersions(versions);
+
+          if (loadedVersion && versions.includes(loadedVersion)) {
+            setSelectedVersion(loadedVersion);
+          } else if (versions.length > 0) {
+            setSelectedVersion(versions[0]);
+          }
         }
 
         if (
@@ -125,19 +131,24 @@ const App: FunctionComponent = () => {
         }
       }
     };
-    handleInitialLoad();
-  }, []); // Пустой массив зависимостей для выполнения только один раз
 
-  // Обновление настроек при смене языка/папки (для сохранения)
+    handleInitialLoad();
+  }, []);
+
   useEffect(() => {
     if (initialLoadComplete) {
-      // Сохраняем путь и код языка, если они доступны
       saveSettings({
-        base_folder_path: folder || undefined,
+        base_folder_path: baseGameFolder || undefined,
         selected_language_code: selectedLanguageCode,
+        selected_version: selectedVersion || undefined,
       });
     }
-  }, [folder, selectedLanguageCode, initialLoadComplete]);
+  }, [
+    baseGameFolder,
+    selectedLanguageCode,
+    selectedVersion,
+    initialLoadComplete,
+  ]);
 
   const handleSelectFolder = async () => {
     try {
@@ -149,11 +160,19 @@ const App: FunctionComponent = () => {
       });
 
       if (selectedPath) {
-        setFolder(selectedPath);
+        setBaseGameFolder(selectedPath);
         setMessage({
           type: 'info',
           text: `Выбрана базовая папка: ${selectedPath}`,
         });
+
+        const versions = await invoke<string[]>('find_available_versions', {
+          baseFolderPath: selectedPath,
+        });
+
+        setAvailableVersions(versions);
+
+        if (versions.length > 0) setSelectedVersion(versions[0]);
       }
     } catch (error) {
       console.error('Error selecting folder:', error);
@@ -162,50 +181,54 @@ const App: FunctionComponent = () => {
   };
 
   const handleInstall = async () => {
-    if (!folder) {
+    if (!baseGameFolder) {
       setMessage({
         type: 'error',
         text: 'Пожалуйста, выберите базовую папку Star Citizen.',
       });
+
       return;
     }
+    if (!selectedVersion) {
+      setMessage({ type: 'error', text: 'Пожалуйста, выберите версию игры.' });
+
+      return;
+    }
+
     setLoading(true);
     setMessage({ type: 'info', text: 'Начинаем установку локализации...' });
 
     try {
-      // 1. Настройка user.cfg и создание папки локализации
       const targetLocalizationPath = await invoke('set_language_config', {
-        baseFolderPath: folder,
+        baseFolderPath: baseGameFolder,
         selectedLanguageCode: selectedLanguageCode,
+        selectedVersion,
       });
 
-      // 2. Скачивание и сохранение файла перевода (глобальный файл)
-      const fileName = 'translation.ini'; // Имя файла перевода на сервере
-      // Путь для сохранения: [folder]/[selectedLanguageCode]/global.ini
-      const targetFilePath = `${targetLocalizationPath}/global111.ini`.replace(
+      const fileName = 'translation.ini';
+      const targetFilePath = `${targetLocalizationPath}/global.ini`.replace(
         /\\/g,
         '/'
       );
-      const serverUrl = `${import.meta.env.VITE_SERVER_URL}/translations/${fileName}`;
+
+      const serverUrl = `${import.meta.env.VITE_SERVER_URL}/translations/${selectedVersion}/${fileName}`;
 
       const response = await fetch(serverUrl);
 
       if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.statusText}`);
+        throw new Error(
+          `Failed to download file for version ${selectedVersion}: ${response.statusText}`
+        );
       }
 
       const fileContent = await response.text();
 
-      // Invoke the Tauri command to write the file
       await invoke('write_text_file', {
         path: targetFilePath,
         content: fileContent,
       });
 
-      setMessage({
-        type: 'success',
-        text: 'Установка завершена!',
-      });
+      setMessage({ type: 'success', text: 'Установка завершена!' });
     } catch (error) {
       console.error('Error during installation:', error);
       setMessage({ type: 'error', text: `Ошибка установки: ${error}` });
@@ -215,11 +238,14 @@ const App: FunctionComponent = () => {
   };
 
   const handleRemove = async () => {
-    if (!folder) {
+    if (!baseGameFolder || !selectedVersion) {
       setMessage({
         type: 'error',
-        text: 'Базовая папка не выбрана. Удаление невозможно.',
+        text: !baseGameFolder
+          ? 'Базовая папка не выбрана. Удаление невозможно.'
+          : 'Пожалуйста, выберите версию игры для удаления.',
       });
+
       return;
     }
 
@@ -227,17 +253,16 @@ const App: FunctionComponent = () => {
     setMessage({ type: 'info', text: 'Начинаем удаление локализации...' });
 
     try {
-      // 1. Вызываем команду Rust для удаления
       await invoke('remove_localization', {
-        base_folder_path: folder,
+        base_folder_path: baseGameFolder,
         selectedLanguageCode: selectedLanguageCode,
+        selected_version: selectedVersion,
       });
 
-      // 2. Сброс настроек
-      // Сохраняем путь к папке (чтобы не искать заново), но сбрасываем код языка
       await saveSettings({
-        base_folder_path: folder,
+        base_folder_path: baseGameFolder,
         selected_language_code: undefined,
+        selected_version: selectedVersion,
       });
 
       setMessage({
@@ -258,17 +283,32 @@ const App: FunctionComponent = () => {
         <h1>Star Citizen Localization Manager</h1>
       </header>
 
-      {/* Status Message Area */}
       {message && <div>{message.text}</div>}
 
-      {/* Selected Folder Display */}
-      {folder && (
+      {baseGameFolder && (
         <div>
-          <span>Базовая папка игры:</span> {folder}
+          <span>Базовая папка игры:</span> {baseGameFolder}
         </div>
       )}
 
-      {/* Language Selection */}
+      {availableVersions.length > 0 && (
+        <div>
+          <label htmlFor="version-select">Выберите версию игры:</label>
+          <select
+            id="version-select"
+            value={selectedVersion}
+            onChange={(e) => setSelectedVersion(e.target.value)}
+            disabled={loading}
+          >
+            {availableVersions.map((ver) => (
+              <option key={ver} value={ver}>
+                {ver}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div>
         <label htmlFor="language-select">Выберите язык перевода:</label>
         <select
@@ -283,6 +323,7 @@ const App: FunctionComponent = () => {
             </option>
           ))}
         </select>
+
         {selectedLanguageCode === 'korean_(south_korea)' && (
           <p>
             Используется системный код `&apos;`korean_(south_korea)`&apos;` для
@@ -291,19 +332,22 @@ const App: FunctionComponent = () => {
         )}
       </div>
 
-      {/* Action Buttons */}
       <div>
         <button onClick={handleSelectFolder} disabled={loading}>
-          {folder
+          {baseGameFolder
             ? 'Выбрать другую базовую папку'
             : 'Выбрать базовую папку вручную'}
         </button>
-
-        <button onClick={handleInstall} disabled={!folder || loading}>
+        <button
+          onClick={handleInstall}
+          disabled={!baseGameFolder || !selectedVersion || loading}
+        >
           {loading ? 'Установка...' : 'Установить Локализацию'}
         </button>
-
-        <button onClick={handleRemove} disabled={!folder || loading}>
+        <button
+          onClick={handleRemove}
+          disabled={!baseGameFolder || !selectedVersion || loading}
+        >
           Удалить Локализацию
         </button>
       </div>
