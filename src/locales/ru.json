@@ -1,0 +1,29 @@
+{
+  "translation": {
+    "title": "Менеджер локализации Star Citizen",
+    "select_folder": "Выбрать базовую папку вручную",
+    "change_folder": "Выбрать другую базовую папку",
+    "select_language": "Выберите язык перевода:",
+    "select_version": "Выберите версию игры:",
+    "install": "Установить локализацию",
+    "installing": "Установка...",
+    "remove": "Удалить локализацию",
+    "folder_label": "Базовая папка игры:",
+    "loading_settings": "Загрузка настроек и поиск папки Star Citizen...",
+    "folder_found": "Базовая папка найдена: {{folder}}",
+    "folder_not_found": "Базовая папка не найдена. Пожалуйста, выберите ее вручную.",
+    "select_folder_error": "Ошибка выбора папки: {{error}}",
+    "no_folder_selected": "Пожалуйста, выберите базовую папку Star Citizen.",
+    "no_version_selected": "Пожалуйста, выберите версию игры.",
+    "installing_localization": "Начинаем установку локализации...",
+    "install_success": "Установка завершена!",
+    "install_error": "Ошибка установки: {{error}}",
+    "removing_localization": "Начинаем удаление локализации...",
+    "remove_success": "Удаление локализации завершено. Папка удалена, строка g_language удалена из user.cfg.",
+    "remove_error": "Ошибка удаления: {{error}}",
+    "no_folder_remove": "Базовая папка не выбрана. Удаление невозможно.",
+    "russian_note": "Используется системный код 'korean_(south_korea)' для активации русского перевода.",
+    "select_app_language": "Выберите язык приложения:",
+    "recommended": "Рекомендуется"
+  }
+}
