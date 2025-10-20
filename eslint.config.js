@@ -8,7 +8,7 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
 import prettier from 'eslint-plugin-prettier';
 
 export default [
-  // 1. Базовые правила JS
+  // 1. Base rules JS
   {
     ...js.configs.recommended,
   },
@@ -50,7 +50,7 @@ export default [
     },
   },
 
-  // 4. Глобальные настройки
+  // 4. Global
   {
     languageOptions: {
       ecmaVersion: 'latest',
