@@ -72,15 +72,15 @@ export const writeTextFile = async (
 };
 
 export const removeLocalization = async (
-  base_folder_path: string,
+  baseFolderPath: string,
   selectedLanguageCode: string,
-  selected_version: string
+  selectedVersion: string
 ): Promise<void> => {
   try {
     await invoke('remove_localization', {
-      base_folder_path,
+      baseFolderPath,
       selectedLanguageCode,
-      selected_version,
+      selectedVersion,
     });
   } catch (error) {
     console.error('Error removing localization:', error);
