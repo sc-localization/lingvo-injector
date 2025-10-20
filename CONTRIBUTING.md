@@ -7,7 +7,7 @@ Before creating an issue please ensure that the problem is not [already reported
 
 ## How to Contribute
 
-1. \*Fork and Clone the Repository\*\*
+1. **Fork and Clone the Repository**
 
    First, create your own copy of the repository by clicking the "Fork" button on GitHub. Then, clone your fork to your local machine:
 
@@ -18,8 +18,8 @@ Before creating an issue please ensure that the problem is not [already reported
 
 2. **Create a New Branch**
 
-   > [!NOTE] 
-   > All development takes place in the dev branch. The main branch always contains only stable, release-ready code.
+> [!NOTE]
+> All development takes place in the **dev branch**. The main branch always contains only stable, release-ready code.
 
    ```sh
    git checkout dev
@@ -45,7 +45,7 @@ Before creating an issue please ensure that the problem is not [already reported
 
 6. **Create a Pull Request**
 
-   Once you've completed your work, create a Pull Request from your branch to the **_dev branch_**. Please ensure that your branch is up-to-date with the dev branch and that the Pull Request is targeted at the dev branch, not the main branch. Double-check the target branch before submitting the Pull Request.
+   Once you've completed your work, create a Pull Request from your branch to the **dev branch**. Please ensure that your branch is up-to-date with the dev branch and that the Pull Request is targeted at the dev branch, not the main branch. Double-check the target branch before submitting the Pull Request.
 
 7. **After Pull Request**
 
