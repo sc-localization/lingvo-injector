@@ -103,33 +103,52 @@ fn try_auto_find_base_folder() -> Result<Option<String>, String> {
     Ok(None)
 }
 
-/// Команда для настройки user.cfg и создания папки локализации
+/// Serach game installed game versions in base folder e.g. Live, PTU or other
+#[tauri::command]
+fn find_available_versions(base_folder_path: String) -> Result<Vec<String>, String> {
+    let base_path = PathBuf::from(&base_folder_path);
+    let entries = fs::read_dir(&base_path)
+        .map_err(|e| format!("Failed to read base folder {:?}: {}", base_path, e))?;
+    let mut versions: Vec<String> = Vec::new();
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+        if path.is_dir() {
+            let version_name = path.file_name().unwrap().to_string_lossy().to_string();
+            let data_dir = path.join("data");
+            let launcher_exe = path.join("StarCitizen_Launcher.exe");
+
+            if data_dir.exists()
+                && data_dir.is_dir()
+                && launcher_exe.exists()
+                && launcher_exe.is_file()
+            {
+                versions.push(version_name);
+            }
+        }
+    }
+    versions.sort();
+    Ok(versions)
+}
+
+/// Setting user.cfg and creade Localization folder
 #[tauri::command]
 fn set_language_config(
     base_folder_path: String,
     selected_language_code: String,
+    selected_version: String,
 ) -> Result<String, String> {
     let base_path = PathBuf::from(&base_folder_path);
+    let version_folder = base_path.join(&selected_version);
 
-    // 1. Определяем актуальную папку версии (LIVE, PTU, HOTFIX)
-    let versions = ["LIVE", "PTU", "HOTFIX"];
-    let mut version_folder: Option<PathBuf> = None;
-
-    for version in versions.iter() {
-        let path = base_path.join(version);
-        // Проверяем, что папка существует и внутри нее есть data
-        if path.exists() && path.is_dir() && path.join("data").is_dir() {
-            version_folder = Some(path);
-            break;
-        }
+    if !version_folder.exists() || !version_folder.is_dir() || !version_folder.join("data").is_dir()
+    {
+        return Err(format!(
+            "Specified version folder {:?} does not exist or is invalid.",
+            version_folder
+        ));
     }
-
-    let version_folder = version_folder.ok_or_else(|| {
-        format!(
-            "Could not find any active game version folder (LIVE/PTU/HOTFIX) inside: {:?}",
-            base_path
-        )
-    })?;
 
     let user_cfg_path = version_folder.join("user.cfg");
     let loc_path = version_folder.join("data").join("Localization");
@@ -175,25 +194,15 @@ fn remove_localization(
     selected_version: String,
 ) -> Result<(), String> {
     let base_path = PathBuf::from(&base_folder_path);
+    let version_folder = base_path.join(&selected_version);
 
-    // 1. Определяем актуальную папку версии (LIVE, PTU, HOTFIX)
-    let versions = ["LIVE", "PTU", "HOTFIX"];
-    let mut version_folder: Option<PathBuf> = None;
-
-    for version in versions.iter() {
-        let path = base_path.join(version);
-        if path.exists() && path.is_dir() && path.join("data").is_dir() {
-            version_folder = Some(path);
-            break;
-        }
+    if !version_folder.exists() || !version_folder.is_dir() || !version_folder.join("data").is_dir()
+    {
+        return Err(format!(
+            "Specified version folder {:?} does not exist or is invalid.",
+            version_folder
+        ));
     }
-
-    let version_folder = version_folder.ok_or_else(|| {
-        format!(
-            "Could not find any active game version folder (LIVE/PTU/HOTFIX) inside: {:?}",
-            base_path
-        )
-    })?;
 
     let user_cfg_path = version_folder.join("user.cfg");
     let loc_folder_path = version_folder
