@@ -4,6 +4,7 @@ import type { AppSettings } from '../types';
 export const readSettings = async (): Promise<AppSettings> => {
   try {
     const settingsJson = await invoke<string>('read_settings');
+
     return JSON.parse(settingsJson);
   } catch (error) {
     console.error('Error reading settings:', error);
@@ -14,6 +15,7 @@ export const readSettings = async (): Promise<AppSettings> => {
 export const writeSettings = async (settings: AppSettings): Promise<void> => {
   try {
     const settingsJson = JSON.stringify(settings);
+
     await invoke('write_settings', { settingsJson });
   } catch (error) {
     console.error('Error writing settings:', error);

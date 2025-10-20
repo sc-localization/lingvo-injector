@@ -21,6 +21,7 @@ export const VersionSelector: React.FC<VersionSelectorProps> = ({
   return (
     <div>
       <label htmlFor="version-select">{t('select_version')}</label>
+
       <select
         id="version-select"
         value={value}
