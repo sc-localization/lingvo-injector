@@ -12,7 +12,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest, windows-latest]
+        platform: [windows-latest]
+        # TODO: for linux support use this:
+        # platform: [ubuntu-latest, windows-latest]
 
     runs-on: ${{ matrix.platform }}
 
@@ -34,10 +36,10 @@ jobs:
         with:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-
-      - name: Install dependencies (Ubuntu only)
-        if: runner.os == 'Linux'
-        run: sudo apt update && sudo apt install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      # TODO: for linux support use this:
+      # - name: Install dependencies (Ubuntu only)
+      #   if: runner.os == 'Linux'
+      #   run: sudo apt update && sudo apt install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install Frontend Dependencies
         run: npm install
