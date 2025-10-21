@@ -1,14 +1,30 @@
-import { FunctionComponent, useEffect, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { LanguageSelector } from './components/LanguageSelector';
+import { VersionSelector } from './components/VersionSelector';
+import { FolderDisplay } from './components/FolderDisplay';
+import { MessageDisplay } from './components/MessageDisplay';
+import { ActionButtons } from './components/ActionButtons';
+import { useAppContext } from './contexts/AppContext';
+import {
+  readSettings,
+  tryAutoFindBaseFolder,
+  findAvailableVersions,
+  writeSettings,
+} from './services/tauriService';
+import type { LanguageOption } from './types';
 
-// Список языков для выбора на фронтенде
-const languages = [
+const appLanguages: LanguageOption[] = [
+  { name: 'English', code: 'en' },
+  { name: 'Русский', code: 'ru' },
+];
+
+const gameLanguages: LanguageOption[] = [
   {
     name: 'Русский (Russian)',
     code: 'korean_(south_korea)',
     isRecommended: true,
-  }, // Используем Korean по запросу
+  },
   { name: 'Chinese (Simplified)', code: 'chinese_(simplified)' },
   { name: 'Chinese (Traditional)', code: 'chinese_(traditional)' },
   { name: 'English', code: 'english' },
@@ -23,292 +39,147 @@ const languages = [
   { name: 'Spanish (spain)', code: 'spanish_(spain)' },
 ];
 
-// Типы для настроек
-interface AppSettings {
-  base_folder_path?: string;
-  selected_language_code?: string;
-}
+export default function App() {
+  const { t, i18n } = useTranslation();
+  const {
+    baseGameFolder,
+    setBaseGameFolder,
+    availableVersions,
+    setAvailableVersions,
+    selectedVersion,
+    setSelectedVersion,
+    selectedGameLanguageCode,
+    setSelectedGameLanguageCode,
+    selectedAppLanguage,
+    setSelectedAppLanguage,
+    loading,
+    setLoading,
+    message,
+    setMessage,
+  } = useAppContext();
 
-const App: FunctionComponent = () => {
-  const [folder, setFolder] = useState<string | null>(null);
-
-  const [selectedLanguageCode, setSelectedLanguageCode] = useState<string>(
-    languages[0].code
-  );
-
-  const [loading, setLoading] = useState(false);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [message, setMessage] = useState<{
-    type: 'success' | 'error' | 'info';
-    text: string;
-  } | null>(null);
-
-  /**
-   * Запись настроек в файл (Rust)
-   */
-  const saveSettings = async (settings: AppSettings) => {
-    try {
-      const settingsJson = JSON.stringify(settings);
-      await invoke('write_settings', { settingsJson: settingsJson });
-    } catch (error) {
-      console.error('Ошибка записи настроек:', error);
-    }
-  };
-
-  // Автоматический поиск и загрузка сохраненных настроек при загрузке
   useEffect(() => {
-    const handleInitialLoad = async () => {
+    const initialize = async () => {
       setLoading(true);
-      setMessage({
-        type: 'info',
-        text: 'Загрузка настроек и поиск папки Star Citizen...',
-      });
-
-      let foundPath: string | null = null;
-      let loadedLanguageCode: string | undefined = undefined;
+      setMessage({ type: 'info', text: t('loading_settings') });
 
       try {
-        // 1. Читаем сохраненные настройки
-        const settingsJson = await invoke<string>('read_settings');
-        const settings: AppSettings = JSON.parse(settingsJson);
+        const settings = await readSettings();
+        const foundPath =
+          settings.base_folder_path || (await tryAutoFindBaseFolder());
 
-        if (settings.base_folder_path) {
-          foundPath = settings.base_folder_path;
-        }
-
-        if (settings.selected_language_code) {
-          loadedLanguageCode = settings.selected_language_code;
-        }
-
-        // 2. Если путь не найден в настройках, ищем автоматически
-        if (!foundPath) {
-          const autoFoundPath = await invoke<string | null>(
-            'try_auto_find_base_folder'
-          );
-          if (autoFoundPath) {
-            foundPath = autoFoundPath;
-          }
-        }
-
-        // 3. Устанавливаем состояния
         if (foundPath) {
-          setFolder(foundPath);
-          // Сохраняем найденный/загруженный путь (на случай если это свежий автопоиск)
-          await saveSettings({
-            base_folder_path: foundPath,
-            selected_language_code: loadedLanguageCode,
-          });
+          setBaseGameFolder(foundPath);
+          const versions = await findAvailableVersions(foundPath);
+          setAvailableVersions(versions);
+          setSelectedVersion(settings.selected_version || (versions[0] ?? ''));
         }
 
-        if (
-          loadedLanguageCode &&
-          languages.some((l) => l.code === loadedLanguageCode)
-        ) {
-          setSelectedLanguageCode(loadedLanguageCode);
-        }
+        setSelectedGameLanguageCode(
+          settings.selected_language_code || gameLanguages[0].code
+        );
+        const appLang = settings.app_language || 'en';
+        setSelectedAppLanguage(appLang);
+
+        setMessage(
+          foundPath
+            ? {
+                type: 'success',
+                text: t('folder_found', { folder: foundPath }),
+              }
+            : { type: 'info', text: t('folder_not_found') }
+        );
       } catch (error) {
-        console.error('Ошибка при начальной загрузке:', error);
-        setMessage({ type: 'error', text: `Ошибка загрузки/поиска: ${error}` });
+        setMessage({ type: 'error', text: t('install_error', { error }) });
       } finally {
-        setInitialLoadComplete(true);
         setLoading(false);
-        if (foundPath) {
-          setMessage({
-            type: 'success',
-            text: `Базовая папка найдена: ${foundPath}`,
-          });
-        } else {
-          setMessage({
-            type: 'info',
-            text: 'Базовая папка не найдена. Пожалуйста, выберите ее вручную.',
-          });
-        }
       }
     };
-    handleInitialLoad();
-  }, []); // Пустой массив зависимостей для выполнения только один раз
 
-  // Обновление настроек при смене языка/папки (для сохранения)
+    initialize();
+  }, [
+    setAvailableVersions,
+    setBaseGameFolder,
+    setLoading,
+    setMessage,
+    setSelectedAppLanguage,
+    setSelectedGameLanguageCode,
+    setSelectedVersion,
+    t,
+  ]);
+
   useEffect(() => {
-    if (initialLoadComplete) {
-      // Сохраняем путь и код языка, если они доступны
-      saveSettings({
-        base_folder_path: folder || undefined,
-        selected_language_code: selectedLanguageCode,
-      });
-    }
-  }, [folder, selectedLanguageCode, initialLoadComplete]);
-
-  const handleSelectFolder = async () => {
-    try {
-      const selectedPath = await open({
-        multiple: false,
-        directory: true,
-        title:
-          'Выберите базовую папку Star Citizen (например, .../Roberts Space Industries/StarCitizen)',
-      });
-
-      if (selectedPath) {
-        setFolder(selectedPath);
-        setMessage({
-          type: 'info',
-          text: `Выбрана базовая папка: ${selectedPath}`,
+    const saveSettings = async () => {
+      try {
+        await writeSettings({
+          base_folder_path: baseGameFolder,
+          selected_language_code: selectedGameLanguageCode,
+          selected_version: selectedVersion,
+          app_language: selectedAppLanguage,
         });
+      } catch (error) {
+        console.error('Error saving settings:', error);
       }
-    } catch (error) {
-      console.error('Error selecting folder:', error);
-      setMessage({ type: 'error', text: `Ошибка выбора папки: ${error}` });
+    };
+
+    if (
+      baseGameFolder ||
+      selectedGameLanguageCode ||
+      selectedVersion ||
+      selectedAppLanguage
+    ) {
+      saveSettings();
     }
-  };
+  }, [
+    baseGameFolder,
+    selectedAppLanguage,
+    selectedGameLanguageCode,
+    selectedVersion,
+  ]);
 
-  const handleInstall = async () => {
-    if (!folder) {
-      setMessage({
-        type: 'error',
-        text: 'Пожалуйста, выберите базовую папку Star Citizen.',
-      });
-      return;
-    }
-    setLoading(true);
-    setMessage({ type: 'info', text: 'Начинаем установку локализации...' });
-
-    try {
-      // 1. Настройка user.cfg и создание папки локализации
-      const targetLocalizationPath = await invoke('set_language_config', {
-        baseFolderPath: folder,
-        selectedLanguageCode: selectedLanguageCode,
-      });
-
-      // 2. Скачивание и сохранение файла перевода (глобальный файл)
-      const fileName = 'translation.ini'; // Имя файла перевода на сервере
-      // Путь для сохранения: [folder]/[selectedLanguageCode]/global.ini
-      const targetFilePath = `${targetLocalizationPath}/global111.ini`.replace(
-        /\\/g,
-        '/'
-      );
-      const serverUrl = `${import.meta.env.VITE_SERVER_URL}/translations/${fileName}`;
-
-      const response = await fetch(serverUrl);
-
-      if (!response.ok) {
-        throw new Error(`Failed to download file: ${response.statusText}`);
-      }
-
-      const fileContent = await response.text();
-
-      // Invoke the Tauri command to write the file
-      await invoke('write_text_file', {
-        path: targetFilePath,
-        content: fileContent,
-      });
-
-      setMessage({
-        type: 'success',
-        text: 'Установка завершена!',
-      });
-    } catch (error) {
-      console.error('Error during installation:', error);
-      setMessage({ type: 'error', text: `Ошибка установки: ${error}` });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemove = async () => {
-    if (!folder) {
-      setMessage({
-        type: 'error',
-        text: 'Базовая папка не выбрана. Удаление невозможно.',
-      });
-      return;
-    }
-
-    setLoading(true);
-    setMessage({ type: 'info', text: 'Начинаем удаление локализации...' });
-
-    try {
-      // 1. Вызываем команду Rust для удаления
-      await invoke('remove_localization', {
-        base_folder_path: folder,
-        selectedLanguageCode: selectedLanguageCode,
-      });
-
-      // 2. Сброс настроек
-      // Сохраняем путь к папке (чтобы не искать заново), но сбрасываем код языка
-      await saveSettings({
-        base_folder_path: folder,
-        selected_language_code: undefined,
-      });
-
-      setMessage({
-        type: 'success',
-        text: 'Удаление локализации завершено. Папка удалена, строка g_language удалена из user.cfg.',
-      });
-    } catch (error) {
-      console.error('Error during removal:', error);
-      setMessage({ type: 'error', text: `Ошибка удаления: ${error}` });
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    i18n.changeLanguage(selectedAppLanguage);
+  }, [selectedAppLanguage, i18n]);
 
   return (
     <div>
       <header>
-        <h1>Star Citizen Localization Manager</h1>
+        <h1>{t('title')}</h1>
       </header>
 
-      {/* Status Message Area */}
-      {message && <div>{message.text}</div>}
+      <MessageDisplay message={message} />
 
-      {/* Selected Folder Display */}
-      {folder && (
-        <div>
-          <span>Базовая папка игры:</span> {folder}
-        </div>
+      <FolderDisplay folder={baseGameFolder} />
+
+      <LanguageSelector
+        options={appLanguages}
+        value={selectedAppLanguage}
+        onChange={setSelectedAppLanguage}
+        labelKey="select_app_language"
+        disabled={loading}
+      />
+
+      <VersionSelector
+        options={availableVersions}
+        value={selectedVersion}
+        onChange={setSelectedVersion}
+        disabled={loading}
+      />
+
+      <LanguageSelector
+        options={gameLanguages}
+        value={selectedGameLanguageCode}
+        onChange={setSelectedGameLanguageCode}
+        labelKey="select_language"
+        disabled={loading}
+        isGameLanguage
+      />
+
+      {selectedGameLanguageCode === 'korean_(south_korea)' && (
+        <p>{t('russian_note')}</p>
       )}
 
-      {/* Language Selection */}
-      <div>
-        <label htmlFor="language-select">Выберите язык перевода:</label>
-        <select
-          id="language-select"
-          value={selectedLanguageCode}
-          onChange={(e) => setSelectedLanguageCode(e.target.value)}
-          disabled={loading}
-        >
-          {languages.map((lang, idx) => (
-            <option key={lang.code + idx} value={lang.code}>
-              {lang.name} {lang.isRecommended ? '(Рекомендуется)' : ''}
-            </option>
-          ))}
-        </select>
-        {selectedLanguageCode === 'korean_(south_korea)' && (
-          <p>
-            Используется системный код `&apos;`korean_(south_korea)`&apos;` для
-            активации русского перевода.
-          </p>
-        )}
-      </div>
-
-      {/* Action Buttons */}
-      <div>
-        <button onClick={handleSelectFolder} disabled={loading}>
-          {folder
-            ? 'Выбрать другую базовую папку'
-            : 'Выбрать базовую папку вручную'}
-        </button>
-
-        <button onClick={handleInstall} disabled={!folder || loading}>
-          {loading ? 'Установка...' : 'Установить Локализацию'}
-        </button>
-
-        <button onClick={handleRemove} disabled={!folder || loading}>
-          Удалить Локализацию
-        </button>
-      </div>
+      <ActionButtons />
     </div>
   );
-};
-
-export default App;
+}

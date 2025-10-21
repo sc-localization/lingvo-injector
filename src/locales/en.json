@@ -1,0 +1,29 @@
+{
+  "translation": {
+    "title": "Star Citizen Localization Manager",
+    "select_folder": "Select base folder manually",
+    "change_folder": "Select another base folder",
+    "select_language": "Select translation language:",
+    "select_version": "Select game version:",
+    "install": "Install Localization",
+    "installing": "Installing...",
+    "remove": "Remove Localization",
+    "folder_label": "Game base folder:",
+    "loading_settings": "Loading settings and searching for Star Citizen folder...",
+    "folder_found": "Base folder found: {{folder}}",
+    "folder_not_found": "Base folder not found. Please select it manually.",
+    "select_folder_error": "Error selecting folder: {{error}}",
+    "no_folder_selected": "Please select the Star Citizen base folder.",
+    "no_version_selected": "Please select a game version.",
+    "installing_localization": "Starting localization installation...",
+    "install_success": "Installation completed!",
+    "install_error": "Installation error: {{error}}",
+    "removing_localization": "Starting localization removal...",
+    "remove_success": "Localization removal completed. Folder deleted, g_language removed from user.cfg.",
+    "remove_error": "Removal error: {{error}}",
+    "no_folder_remove": "Base folder not selected. Removal impossible.",
+    "russian_note": "Using system code 'korean_(south_korea)' to activate Russian translation.",
+    "select_app_language": "Select application language:",
+    "recommended": "Recommended"
+  }
+}
