@@ -35,6 +35,8 @@ jobs:
     name: Tauri Build Check
     needs: [lint-and-format-check]
 
+    environment: pr-check
+
     strategy:
       fail-fast: false
       matrix:
