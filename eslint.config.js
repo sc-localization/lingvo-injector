@@ -1,4 +1,4 @@
-import { defineConfig } from 'eslint/config';
+import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
@@ -73,4 +73,11 @@ export default defineConfig([
       'react/prop-types': 'off',
     },
   },
+
+  globalIgnores([
+    'dist/',
+    'node_modules/',
+    'src-tauri/target/',
+    'src-tauri/gen/schemas/',
+  ]),
 ]);
