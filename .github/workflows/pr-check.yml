@@ -73,7 +73,7 @@ jobs:
       - name: Disable Updater for CI Build
         run: |
           npm install --no-save jsonfile
-          node -e "const fs = require('jsonfile'); const config = fs.readFileSync('src-tauri/tauri.conf.json'); config.updater.active = false; fs.writeFileSync('src-tauri/tauri.conf.json', config);"
+          node -e "const fs = require('jsonfile'); const config = fs.readFileSync('src-tauri/tauri.conf.json'); config.plugins.updater.active = false; fs.writeFileSync('src-tauri/tauri.conf.json', config);"
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
