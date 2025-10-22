@@ -18,14 +18,9 @@ Before creating an issue please ensure that the problem is not [already reported
 
 2. **Create a New Branch**
 
-> [!NOTE]
-> All development takes place in the **dev branch**. The main branch always contains only stable, release-ready code.
-
-```sh
-git checkout dev
-git pull origin dev
-git checkout -b feature/short-description
-```
+   ```sh
+   git checkout -b feature/short-description
+   ```
 
 3. **Make Changes**
    Implement your feature or fix the bug. Be sure to follow the project's coding style and add tests if necessary.
@@ -44,16 +39,6 @@ git checkout -b feature/short-description
    ```
 
 6. **Create a Pull Request**
-
-   Once you've completed your work, create a Pull Request from your branch to the **dev branch**. Please ensure that your branch is up-to-date with the dev branch and that the Pull Request is targeted at the dev branch, not the main branch. Double-check the target branch before submitting the Pull Request.
-
-7. **After Pull Request**
-
-   ```sh
-   git checkout dev
-   git pull origin dev
-   git branch -d feature/your-new-feature
-   ```
 
 ## Commit messages
 
