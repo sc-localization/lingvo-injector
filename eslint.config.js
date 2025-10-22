@@ -1,3 +1,4 @@
+import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
@@ -7,7 +8,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import prettier from 'eslint-plugin-prettier';
 
-export default [
+export default defineConfig([
   // 1. Base rules JS
   {
     ...js.configs.recommended,
@@ -72,4 +73,4 @@ export default [
       'react/prop-types': 'off',
     },
   },
-];
+]);
