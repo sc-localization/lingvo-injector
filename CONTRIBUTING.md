@@ -21,11 +21,11 @@ Before creating an issue please ensure that the problem is not [already reported
 > [!NOTE]
 > All development takes place in the **dev branch**. The main branch always contains only stable, release-ready code.
 
-   ```sh
-   git checkout dev
-   git pull origin dev
-   git checkout -b feature/short-description
-   ```
+```sh
+git checkout dev
+git pull origin dev
+git checkout -b feature/short-description
+```
 
 3. **Make Changes**
    Implement your feature or fix the bug. Be sure to follow the project's coding style and add tests if necessary.

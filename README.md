@@ -1,4 +1,4 @@
-![GitHub License](https://img.shields.io/github/license/sc-localization/lingvo-injector) ![GitHub Release](https://img.shields.io/github/v/release/sc-localization/lingvo-injector) ![GitHub Release Date](https://img.shields.io/github/release-date/sc-localization/lingvo-injector) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/sc-localization/lingvo-injector/total) 
+![GitHub License](https://img.shields.io/github/license/sc-localization/lingvo-injector) ![GitHub Release](https://img.shields.io/github/v/release/sc-localization/lingvo-injector) ![GitHub Release Date](https://img.shields.io/github/release-date/sc-localization/lingvo-injector) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/sc-localization/lingvo-injector/total)
 
 <div align="center">
   <h1>Lingvo Injector</h1>
