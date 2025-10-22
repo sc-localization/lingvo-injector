@@ -35,7 +35,11 @@ jobs:
 
       - name: Check Code Formatting
         if: ${{ matrix.platform == 'ubuntu-latest' }}
-        run: npm run format:check
+        run: |
+          npm run format:check || {
+            echo "::error file=.:: Code formatting check failed. Please run 'npm run format' locally to fix all errors."
+            exit 1
+            }
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -49,4 +53,4 @@ jobs:
 
       - name: Run Tauri Build Check (Windows Only)
         if: ${{ matrix.platform == 'windows-latest' }}
-        run: npm run tauri build -- --target x86_64-pc-windows-msvc
+        run: npm run tauri build -- --target x86_64-pc-windows-msvc --no-sign
