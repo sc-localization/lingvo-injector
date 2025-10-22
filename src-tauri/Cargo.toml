@@ -1,8 +1,8 @@
 [package]
 name = "lingvo-injector-app"
 version = "0.0.1"
-description = "A Tauri App"
-authors = ["you"]
+description = "Star Citizen Localization Installer"
+authors = ["mvoof"]
 edition = "2021"
 build = "build.rs"
 
