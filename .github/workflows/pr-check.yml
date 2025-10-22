@@ -67,8 +67,12 @@ jobs:
 
       - name: Run Tauri Build Check (Windows Only)
         if: ${{ matrix.platform == 'windows-latest' }}
-        run: npm run tauri build -- --no-sign --target x86_64-pc-windows-msvc
+        run: npm run tauri build -- --target x86_64-pc-windows-msvc
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: '' 
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
 
       - name: Run Compilation Check (Linux/macOS)
         if: ${{ matrix.platform != 'windows-latest' }}
+        working-directory: src-tauri
         run: cargo build --release
