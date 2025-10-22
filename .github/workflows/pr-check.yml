@@ -1,25 +1,17 @@
-name: Check PR to main branch
+name: Check PR to main branch (Lint, Format, Build)
 
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, edited]
 
 jobs:
-  check:
-    strategy:
-      fail-fast: false
-      matrix:
-        # For speed, we'll leave only Ubuntu for Lint/Format, but we'll build on all
-        platform: [ubuntu-latest, windows-latest]
-
-    runs-on: ${{ matrix.platform }}
+  lint-and-format-check:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,28 +21,54 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm install
 
-      - name: Run ESLint Check (Non-Fixing)
-        if: ${{ matrix.platform == 'ubuntu-latest' }}
+      - name: Run ESLint Check
         run: npm run lint
 
       - name: Check Code Formatting
-        if: ${{ matrix.platform == 'ubuntu-latest' }}
         run: |
-          npm run format:check || {
-            echo "::error file=.:: Code formatting check failed. Please run 'npm run format' locally to fix all errors."
+          npx prettier --check "./**/*.{js,jsx,ts,tsx,json,css,scss,md}" || {
+            echo "::error file=.:: Code formatting errors found. Please run 'npm run format' locally to fix them."
             exit 1
-            }
+          }
+
+  tauri-build-check:
+    name: Tauri Build Check
+    needs: [lint-and-format-check]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend Dependencies
+        run: npm install
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Install dependencies (Ubuntu only)
+      - name: Install Dependencies (Linux only)
         if: runner.os == 'Linux'
-        run: sudo apt update && sudo apt install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+        run: |
+          sudo apt update
+          sudo apt install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Run Tauri Build Check (Windows Only)
         if: ${{ matrix.platform == 'windows-latest' }}
-        run: npm run tauri build -- --target x86_64-pc-windows-msvc --no-sign
+        run: npm run tauri build -- --no-sign --target x86_64-pc-windows-msvc
+
+      - name: Run Compilation Check (Linux/macOS)
+        if: ${{ matrix.platform != 'windows-latest' }}
+        run: cargo build --release
