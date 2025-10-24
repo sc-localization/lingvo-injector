@@ -1,0 +1,7 @@
+{
+  "identifier": "com.voof.lingvo-injector-app",
+  "bundle": {
+    "targets": ["nsis","appimage"],
+    "createUpdaterArtifacts": false
+  }
+}
