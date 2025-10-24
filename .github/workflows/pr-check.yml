@@ -1,4 +1,4 @@
-name: Check PR to main branch (Lint, Format, Build)
+name: Check PR
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   lint-and-format-check:
-    name: Lint & Format Check
+    name: Lint & Format
     runs-on: ubuntu-latest
 
     steps:
@@ -28,11 +28,11 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm ci
 
-      - name: Run ESLint Check
+      - name: Run ESLint
         run: npm run lint
 
   tauri-build-check:
-    name: Tauri Build Check
+    name: Build App
     needs: [lint-and-format-check]
     environment: pr-check
     strategy:
@@ -70,11 +70,6 @@ jobs:
           key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-rust-
 
-      - name: Disable Updater for CI Build
-        run: |
-          npm install --no-save jsonfile
-          node -e "const fs = require('jsonfile'); const config = fs.readFileSync('src-tauri/tauri.conf.json'); config.plugins.updater.active = false; fs.writeFileSync('src-tauri/tauri.conf.json', config);"
-
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
@@ -85,4 +80,11 @@ jobs:
           sudo apt install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Run Tauri Build Check
-        run: npm run tauri build
+        run: npm run tauri:build:local
+
+      - name: Upload Combined Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ runner.os }}-build-zip
+          path: src-tauri/target/release/bundle/
+          compression-level: 9

@@ -1,0 +1,57 @@
+name: Add Build Artifact Links As Comment
+
+on:
+  workflow_run:
+    # Имя рабочего процесса, после которого нужно запускаться
+    workflows: ['Check PR to main branch']
+    types: [completed]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Find PR, Get Artifacts & Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run_id = github.event.workflow_run.id;
+            const pullRequests = context.payload.workflow_run.pull_requests;
+
+            if (!pullRequests || pullRequests.length === 0) {
+              core.info('Workflow run was not triggered by a Pull Request. Skipping comment.');
+              return;
+            }
+
+            const artifactsResponse = await github.rest.actions.listWorkflowRunArtifacts({
+              owner,
+              repo,
+              run_id
+            });
+
+            let commentBody = '## Archived Build Artifacts for this Pull Request:\n\n';
+
+            const buildArtifacts = artifactsResponse.data.artifacts.filter(a => 
+              a.name === 'Windows-build-zip' || a.name === 'Linux-build-zip'
+            );
+
+            if (buildArtifacts.length === 0) {
+              commentBody += '⚠️ **No artifacts found**';
+            } else {
+              for (const artifact of buildArtifacts) {
+                const downloadUrl = `${github.context.serverUrl}/${owner}/${repo}/actions/runs/${run_id}/artifacts/${artifact.id}`;
+                
+                let displayName = artifact.name.replace('-build-zip', '').toUpperCase();
+                
+                commentBody += `- [📥 **Download ${displayName} ZIP**](${downloadUrl})\n`;
+              }
+            }
+
+            github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: owner,
+              repo: repo,
+              body: commentBody
+            });
