@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v5
       - name: Setup Dependencies
         uses: ./.github/actions/setup-dependencies
         with:
@@ -31,6 +32,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
+      - uses: actions/checkout@v5
       - name: Setup Dependencies
         uses: ./.github/actions/setup-dependencies
         with:
