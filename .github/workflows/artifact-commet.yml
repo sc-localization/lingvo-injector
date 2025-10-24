@@ -2,8 +2,7 @@ name: Add Build Artifact Links As Comment
 
 on:
   workflow_run:
-    # Имя рабочего процесса, после которого нужно запускаться
-    workflows: ['Check PR to main branch']
+    workflows: ['Check PR']
     types: [completed]
 
 jobs:
@@ -42,16 +41,14 @@ jobs:
             } else {
               for (const artifact of buildArtifacts) {
                 const downloadUrl = `${github.context.serverUrl}/${owner}/${repo}/actions/runs/${run_id}/artifacts/${artifact.id}`;
-                
                 let displayName = artifact.name.replace('-build-zip', '').toUpperCase();
-                
                 commentBody += `- [📥 **Download ${displayName} ZIP**](${downloadUrl})\n`;
               }
             }
 
             github.rest.issues.createComment({
-              issue_number: prNumber,
-              owner: owner,
-              repo: repo,
+              issue_number: pullRequests[0].number,
+              owner,
+              repo,
               body: commentBody
             });
