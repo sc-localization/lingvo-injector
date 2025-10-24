@@ -40,7 +40,7 @@ jobs:
           platform: ${{ matrix.platform }}
 
       - name: Run Tauri Build Check
-        run: npm run tauri:build:local
+        run: npm run tauri:build:dev"
 
       - name: Upload Combined Build Artifact
         uses: actions/upload-artifact@v4
