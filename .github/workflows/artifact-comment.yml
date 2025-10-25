@@ -11,6 +11,9 @@ jobs:
   comment-on-pr:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.artifacts_url != '' }}
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - name: Get Artifact URL & PR Info
         env:
@@ -36,7 +39,7 @@ jobs:
           fi
 
           # Convert artifacts to a markdown table
-          ARTIFACT_TABLE=$(echo "$ARTIFACTS" | jq -r '. | "\(.name) | [\(.name)](\(.url)) | \(.expires)"' | sed 's/ *|/ |/g')
+          ARTIFACT_TABLE=$(echo "$ARTIFACTS" | jq -r '. | "\(.name) | [\(.name)](\(.url)) | \(.expires // "Unknown")"' | sed 's/ *|/ |/g')
           echo "ARTIFACT_TABLE<<EOF" >> "$GITHUB_ENV"
           echo "$ARTIFACT_TABLE" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
