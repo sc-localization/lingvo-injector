@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for changes
+      - name: Check for file changes
         id: filter
         uses: dorny/paths-filter@v3
         with:
@@ -70,22 +70,23 @@ jobs:
           node-version: '20'
           platform: ${{ matrix.platform }}
 
-      - name: Run Tauri Build Check
+      - name: Run Tauri Build
         run: npm run tauri:build:dev
         shell: bash
 
       - name: Upload Combined Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-build-zip
+          name: ${{ runner.os }}-build
           path: src-tauri/target/release/bundle/
-          compression-level: 9
+          compression-level: 6
+          if-no-files-found: warn
 
   docs-check:
     name: Docs Check
     needs: check-changes
     runs-on: ubuntu-latest
-    if: ${{ needs.check-changes.outputs.docs == 'true' && needs.check-changes.outputs.code != 'true' }}
+    if: ${{ needs.check-changes.outputs.docs == 'true' }}
     steps:
       - uses: actions/checkout@v5
       - name: Pass Docs Check
@@ -96,7 +97,7 @@ jobs:
     name: CI Check
     needs: check-changes
     runs-on: ubuntu-latest
-    if: ${{ needs.check-changes.outputs.ci == 'true' && needs.check-changes.outputs.code != 'true' && needs.check-changes.outputs.docs != 'true' }}
+    if: ${{ needs.check-changes.outputs.ci == 'true' }}
     steps:
       - uses: actions/checkout@v5
       - name: Pass CI Check
