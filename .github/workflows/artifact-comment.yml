@@ -31,17 +31,28 @@ jobs:
             --jq ".artifacts.[] |
             select(.workflow_run.id==${PREVIOUS_JOB_ID}) |
             select(.expired==false) |
-            {name: .name, url: .archive_download_url, expires: .expires_at}")
+            {name: .name, id: .id, expires: .expires_at}")
 
           if [ -z "$ARTIFACTS" ]; then
             echo "Error: No artifacts found for workflow run $PREVIOUS_JOB_ID"
             exit 1
           fi
-
+          
           # Convert artifacts to a markdown table
-          ARTIFACT_TABLE=$(echo "$ARTIFACTS" | jq -r '. | "\(.name) | [\(.name)](\(.url)) | \(.expires // "Unknown")"' | sed 's/ *|/ |/g')
+          ARTIFACT_TABLE=""
+          while IFS= read -r artifact; do
+            ARTIFACT_NAME=$(echo "$artifact" | jq -r '.name')
+            ARTIFACT_ID=$(echo "$artifact" | jq -r '.id')
+            ARTIFACT_EXPIRES=$(echo "$artifact" | jq -r '.expires // "Unknown"')
+            
+            # Creating a link to an artifact
+            ARTIFACT_URL="https://github.com/$OWNER/$REPO/actions/runs/$PREVIOUS_JOB_ID/artifacts/$ARTIFACT_ID"
+            
+            ARTIFACT_TABLE="$ARTIFACT_TABLE$ARTIFACT_NAME | [$ARTIFACT_NAME]($ARTIFACT_URL) | $ARTIFACT_EXPIRES\n"
+          done <<< "$ARTIFACTS"
+
           echo "ARTIFACT_TABLE<<EOF" >> "$GITHUB_ENV"
-          echo "$ARTIFACT_TABLE" >> "$GITHUB_ENV"
+          echo -e "$ARTIFACT_TABLE" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
 
           PR_NUMBER=$(jq -r '.pull_requests[0].number' <<< "$WORKFLOW_RUN_EVENT_OBJ")
@@ -80,9 +91,9 @@ jobs:
             Build Successful! You can find links to the downloadable artifacts below.
 
             | Artifact Name | Download Link | Expires At |
-            | ------------- | ------------- | ---------- |
+            |:-------------:|:-------------:|:----------:|
             ${{ env.ARTIFACT_TABLE }}
-            | Commit        | ${{ env.HEAD_SHA }} | - |
-            | Logs          | ${{ env.JOB_PATH }} | - |
+            | Commit        | [${{ env.HEAD_SHA }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ env.HEAD_SHA }}) | - |
+            | Logs          | [$JOB_PATH]($JOB_PATH) | - |
 
-            [badge]: https://img.shields.io/badge/Build_Success!-0d1117?style=for-the-badge&labelColor=3fb950&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZmZmZmZmIj48cGF0aCBkPSJNMjEuMDMgNS43MmEuNzUuNzUgMCAwIDEgMCAxLjA2bC0xMS41IDExLjVhLjc0Ny43NDcgMCAwIDEtMS4wNzItLjAxMmwtNS41LTUuNzVhLjc1Ljc1IDAgMSAxIDEuMDg0LTEuMDM2bDQuOTcgNS4xOTVMMTkuOTcgNS43MmEuNzUuNzUgMCAwIDEgMS4wNiAwWiI+PC9wYXRoPjwvc3ZnPg==
+            [badge]: https://img.shields.io/badge/Build_Success!-0d1117?style=for-the-badge&labelColor=3fb950&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZmZmZmZmIj48cGF0aCBkPSJNMjEuMDMgNS43MmEuNzUuNzUgMCAwIDEgMCAxLjA2bC0xMS41IDExLjVhLjc0Ny43NDcgMCAwIDEtMS4wNzItLjAxMmwtNS41LTUuNzVhLjc1Ljc1IDAgMSAxIDEuMDg0LTElMDM2bDQuOTcgNS4xOTVMMTkuOTcgNS43MmEuNzUuNzUgMCAwIDEgMS4wNiAwWiI+PC9wYXRoPjwvc3ZnPg==
