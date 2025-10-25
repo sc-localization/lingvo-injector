@@ -102,3 +102,36 @@ jobs:
       - name: Pass CI Check
         run: echo "CI changes detected, passing check"
         shell: bash
+
+  status-check:
+    name: PR Final Status
+    needs: [check-changes, lint-and-format-check, tauri-build-check]
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Set Workflow Status
+        run: |
+          echo "Code changes: ${{ needs.check-changes.outputs.code }}"
+          echo "Docs changes: ${{ needs.check-changes.outputs.docs }}"
+          echo "Lint result: ${{ needs.lint-and-format-check.result }}"
+          echo "Build result: ${{ needs.tauri-build-check.result }}"
+          if [ "${{ needs.check-changes.outputs.code }}" != "true" ]; then
+            echo "No code changes detected, setting workflow status to success"
+            exit 0
+          else
+            lint_result="${{ needs.lint-and-format-check.result }}"
+            build_result="${{ needs.tauri-build-check.result }}"
+            if [ "$lint_result" == "success" ] || [ "$lint_result" == "skipped" ]; then
+              if [ "$build_result" == "success" ] || [ "$build_result" == "skipped" ]; then
+                echo "All required jobs passed or skipped, setting workflow status to success"
+                exit 0
+              else
+                echo "Build job failed, setting workflow status to failure"
+                exit 1
+              fi
+            else
+              echo "Lint job failed, setting workflow status to failure"
+              exit 1
+            fi
+          fi
+        shell: bash
