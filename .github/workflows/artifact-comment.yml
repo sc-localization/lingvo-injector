@@ -48,11 +48,13 @@ jobs:
             # Creating a link to an artifact
             ARTIFACT_URL="https://github.com/$OWNER/$REPO/actions/runs/$PREVIOUS_JOB_ID/artifacts/$ARTIFACT_ID"
             
-            ARTIFACT_TABLE="$ARTIFACT_TABLE$ARTIFACT_NAME | [$ARTIFACT_NAME]($ARTIFACT_URL) | $ARTIFACT_EXPIRES\n"
+            ARTIFACT_TABLE="${ARTIFACT_TABLE}$ARTIFACT_NAME | [$ARTIFACT_NAME]($ARTIFACT_URL) | $ARTIFACT_EXPIRES\n"
           done <<< "$ARTIFACTS"
 
+          # и избежать автоматического добавления \n от echo.
           echo "ARTIFACT_TABLE<<EOF" >> "$GITHUB_ENV"
-          echo -e "$ARTIFACT_TABLE" >> "$GITHUB_ENV"
+          printf -v ARTIFACT_TABLE_FINAL -- '%b' "$ARTIFACT_TABLE" # Интерпретируем \n в ARTIFACT_TABLE
+          printf "%s" "$ARTIFACT_TABLE_FINAL" >> "$GITHUB_ENV" # Записываем без лишнего переноса
           echo "EOF" >> "$GITHUB_ENV"
 
           PR_NUMBER=$(jq -r '.pull_requests[0].number' <<< "$WORKFLOW_RUN_EVENT_OBJ")
@@ -91,9 +93,9 @@ jobs:
             Build Successful! You can find links to the downloadable artifacts below.
 
             | Artifact Name | Download Link | Expires At |
-            |:-------------:|:-------------:|:----------:|
+            | ------------- | ------------- | ---------- |
             ${{ env.ARTIFACT_TABLE }}
-            | Commit        | [${{ env.HEAD_SHA }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ env.HEAD_SHA }}) | - |
-            | Logs          | [$JOB_PATH]($JOB_PATH) | - |
+            | Commit        | ${{ env.HEAD_SHA }} | - |
+            | Logs          | ${{ env.JOB_PATH }} | - |
 
-            [badge]: https://img.shields.io/badge/Build_Success!-0d1117?style=for-the-badge&labelColor=3fb950&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZmZmZmZmIj48cGF0aCBkPSJNMjEuMDMgNS43MmEuNzUuNzUgMCAwIDEgMCAxLjA2bC0xMS41IDExLjVhLjc0Ny43NDcgMCAwIDEtMS4wNzItLjAxMmwtNS41LTUuNzVhLjc1Ljc1IDAgMSAxIDEuMDg0LTElMDM2bDQuOTcgNS4xOTVMMTkuOTcgNS43MmEuNzUuNzUgMCAwIDEgMS4wNiAwWiI+PC9wYXRoPjwvc3ZnPg==
+            [badge]: https://img.shields.io/badge/Build_Success!-0d1117?style=for-the-badge&labelColor=3fb950&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZmZmZmZmIj48cGF0aCBkPSJNMjEuMDMgNS43MmEuNzUuNzUgMCAwIDEgMCAxLjA2bC0xMS41IDExLjVhLjc0Ny43NDcgMCAwIDEtMS4wNzItLjAxMmwtNS41LTUuNzVhLjc1Ljc1IDAgMSAxIDEuMDg0LTEuMDM2bDQuOTcgNS4xOTVMMTkuOTcgNS43MmEuNzUuNzUgMCAwIDEgMS4wNiAwWiI+PC9wYXRoPjwvc3ZnPg==
