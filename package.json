@@ -1,7 +1,6 @@
 {
   "name": "lingvo-injector-app",
   "description": "Star Citizen Localization Installer",
-  "productName": "lingvo-injector-app",
   "private": true,
   "version": "0.0.1",
   "type": "module",
